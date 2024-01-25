@@ -46,14 +46,16 @@ def project_3d_pt(pt, cam_to_img, calib_file=None):
         Tr_velo_to_cam = get_tr_to_velo(calib_file)
 
     point = np.array(pt)
+    print("point:")
+    print(point)
     point = np.append(point, 1)
-
     point = np.dot(cam_to_img, point)
-    # point = np.dot(np.dot(np.dot(cam_to_img, R0_rect), Tr_velo_to_cam), point)
+    #point = np.dot(np.dot(np.dot(cam_to_img, R0_rect), Tr_velo_to_cam), point)
 
     point = point[:2]/point[2]
     point = point.astype(np.int16)
-
+    print("new point:")
+    print(point)
     return point
 
 
@@ -80,14 +82,17 @@ def plot_3d_pts(img, pts, center, calib_file=None, cam_to_img=None, relative=Fal
 
 def plot_3d_box(img, cam_to_img, ry, dimension, center):
 
-    # plot_3d_pts(img, [center], center, calib_file=calib_file, cam_to_img=cam_to_img)
+    #plot_3d_pts(img, [center], center, calib_file=calib_file, cam_to_img=cam_to_img)
 
     R = rotation_matrix(ry)
 
     corners = create_corners(dimension, location=center, R=R)
-
+    bev_corners = create_corners(dimension, location=center, R=R)
+    print(f"corners:{corners}")
+    # 繪製Bird's Eye View
+    plot_bev(bev_corners)
     # to see the corners on image as red circles
-    # plot_3d_pts(img, corners, center,cam_to_img=cam_to_img, relative=False)
+    plot_3d_pts(img, corners, center,cam_to_img=cam_to_img, relative=False)
 
     box_3d = []
     for corner in corners:
@@ -122,3 +127,21 @@ def plot_2d_box(img, box_2d):
     cv2.line(img, pt2, pt3, cv_colors.BLUE.value, 2)
     cv2.line(img, pt3, pt4, cv_colors.BLUE.value, 2)
     cv2.line(img, pt4, pt1, cv_colors.BLUE.value, 2)
+
+def plot_bev(corners, window_name='Bird\'s Eye View', color=(0, 0, 0), size=(700, 700)):
+    # 創建一個全白的圖像
+    img_bev = np.ones(size + (3,), np.uint8) * 255
+
+    # 將3D座標轉換為2D座標
+    points = [(int(x), int(y)) for x, y, z in corners]
+    print(f"BEV points:{points}")
+    # 繪製邊界框
+    for i in range(4):
+        cv2.line(img_bev, points[i], points[(i+1)%4], color, 2)
+        cv2.line(img_bev, points[i+4], points[(i+1)%4+4], color, 2)
+        cv2.line(img_bev, points[i], points[i+4], color, 2)
+
+    # 顯示圖像
+    cv2.imshow(window_name, img_bev)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

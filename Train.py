@@ -6,15 +6,16 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torchvision.models import vgg
+from torchvision.models import mobilenet_v3_small
 from torch.utils import data
-
+from ultralytics import YOLO
 
 import os
 
 def main():
 
     # hyper parameters
-    epochs = 100
+    epochs = 10
     batch_size = 8
     alpha = 0.6
     w = 0.4
@@ -23,13 +24,16 @@ def main():
 
     train_path = os.path.abspath(os.path.dirname(__file__)) + '/Kitti/training'
     dataset = Dataset(train_path)
-
     params = {'batch_size': batch_size,
               'shuffle': True,
               'num_workers': 6}
 
     generator = data.DataLoader(dataset, **params)
 
+
+    # 替換VGG模型的相應部分
+    #my_mobilenetv3_small = mobilenet_v3_small(pretrained=True)  # 使用適當的預訓練權重
+    #model = Model(features=my_mobilenetv3_small.features).cuda()
     my_vgg = vgg.vgg19_bn(pretrained=True)
     model = Model(features=my_vgg.features).cuda()
     opt_SGD = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)

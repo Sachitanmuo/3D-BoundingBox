@@ -29,9 +29,9 @@ class cv_Yolo:
     def detect(self, image):
         # assert image is opencv
         (H,W) = image.shape[:2]
-
+        print(f'(H,W)={H}, {W}')
         ln = self.net.getLayerNames()
-        ln = [ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
+        ln = [ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
 
         # prepare input
         blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)

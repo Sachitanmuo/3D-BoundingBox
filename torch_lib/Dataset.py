@@ -31,8 +31,11 @@ class Dataset(data.Dataset):
 
         # TODO: which camera cal to use, per frame or global one?
         self.proj_matrix = get_P(os.path.abspath(os.path.dirname(os.path.dirname(__file__)) + '/camera_cal/calib_cam_to_cam.txt'))
-
-        self.ids = [x.split('.')[0] for x in sorted(os.listdir(self.top_img_path))] # name of file
+        #Modifications:
+        file_list = sorted(os.listdir(self.top_img_path))
+        twenty_percent = int(len(file_list) * 0.2)
+        self.ids = [x.split('.')[0] for x in file_list[:twenty_percent]]
+        #self.ids = [x.split('.')[0] for x in sorted(os.listdir(self.top_img_path))] # name of file
         self.num_images = len(self.ids)
 
         # create angle bins

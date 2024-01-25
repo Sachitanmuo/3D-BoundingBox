@@ -32,7 +32,6 @@ def create_corners(dimension, location=None, R=None):
                 z_corners.append(dz*k)
 
     corners = [x_corners, y_corners, z_corners]
-
     # rotate if R is passed in
     if R is not None:
         corners = np.dot(R, corners)

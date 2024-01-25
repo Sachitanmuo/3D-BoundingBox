@@ -44,8 +44,6 @@ def create_corners(dimension, location=None, R=None):
     final_corners = []
     for i in range(8):
         final_corners.append([corners[0][i], corners[1][i], corners[2][i]])
-
-
     return final_corners
 
 # this is based on the paper. Math!

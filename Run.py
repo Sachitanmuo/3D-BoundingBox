@@ -57,18 +57,17 @@ parser.add_argument("--hide-debug", action="store_true",
                     help="Supress the printing of each 3d location")
 
 
-def plot_regressed_3d_bbox(img, cam_to_img, box_2d, dimensions, alpha, theta_ray, img_2d=None):
+def plot_regressed_3d_bbox(img, bev_img, cam_to_img, box_2d, dimensions, alpha, theta_ray, img_2d=None):
 
     # the math! returns X, the corners used for constraint
     location, X = calc_location(dimensions, cam_to_img, box_2d, alpha, theta_ray)
-
     orient = alpha + theta_ray
 
     if img_2d is not None:
         plot_2d_box(img_2d, box_2d)
 
     plot_3d_box(img, cam_to_img, orient, dimensions, location) # 3d boxes
-
+    plot_bev(bev_img, location, orient, dimensions, scale=10, image_size=(500, 500))
     return location
 
 def main():
@@ -135,7 +134,7 @@ def main():
         yolo_img = np.copy(truth_img)
 
         detections = yolo.detect(yolo_img)
-
+        bev_img = np.zeros((500, 500, 3), dtype=np.uint8) + 255
         for detection in detections:
 
             if not averages.recognized_class(detection.detected_class):
@@ -173,9 +172,9 @@ def main():
             alpha -= np.pi
 
             if FLAGS.show_yolo:
-                location = plot_regressed_3d_bbox(img, proj_matrix, box_2d, dim, alpha, theta_ray, truth_img)
+                location = plot_regressed_3d_bbox(img, bev_img, proj_matrix, box_2d, dim, alpha, theta_ray, truth_img)
             else:
-                location = plot_regressed_3d_bbox(img, proj_matrix, box_2d, dim, alpha, theta_ray)
+                location = plot_regressed_3d_bbox(img, bev_img, proj_matrix, box_2d, dim, alpha, theta_ray)
 
             if not FLAGS.hide_debug:
                 print('Estimated pose: %s'%location)
@@ -185,6 +184,7 @@ def main():
             cv2.imshow('SPACE for next image, any other key to exit', numpy_vertical)
         else:
             cv2.imshow('3D detections', img)
+            cv2.imshow('BEV', bev_img)
 
         if not FLAGS.hide_debug:
             print("\n")

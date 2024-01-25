@@ -46,16 +46,12 @@ def project_3d_pt(pt, cam_to_img, calib_file=None):
         Tr_velo_to_cam = get_tr_to_velo(calib_file)
 
     point = np.array(pt)
-    print("point:")
-    print(point)
     point = np.append(point, 1)
     point = np.dot(cam_to_img, point)
     #point = np.dot(np.dot(np.dot(cam_to_img, R0_rect), Tr_velo_to_cam), point)
 
     point = point[:2]/point[2]
     point = point.astype(np.int16)
-    print("new point:")
-    print(point)
     return point
 
 
@@ -87,13 +83,11 @@ def plot_3d_box(img, cam_to_img, ry, dimension, center):
     R = rotation_matrix(ry)
 
     corners = create_corners(dimension, location=center, R=R)
-    bev_corners = create_corners(dimension, location=center, R=R)
-    print(f"corners:{corners}")
+    #plot_bev(corners, center)
     # 繪製Bird's Eye View
-    plot_bev(bev_corners)
     # to see the corners on image as red circles
     plot_3d_pts(img, corners, center,cam_to_img=cam_to_img, relative=False)
-
+    print(f"center:{center}")
     box_3d = []
     for corner in corners:
         point = project_3d_pt(corner, cam_to_img)
@@ -128,20 +122,30 @@ def plot_2d_box(img, box_2d):
     cv2.line(img, pt3, pt4, cv_colors.BLUE.value, 2)
     cv2.line(img, pt4, pt1, cv_colors.BLUE.value, 2)
 
-def plot_bev(corners, window_name='Bird\'s Eye View', color=(0, 0, 0), size=(700, 700)):
-    # 創建一個全白的圖像
-    img_bev = np.ones(size + (3,), np.uint8) * 255
 
-    # 將3D座標轉換為2D座標
-    points = [(int(x), int(y)) for x, y, z in corners]
-    print(f"BEV points:{points}")
-    # 繪製邊界框
+
+def plot_bev(bev_img, center, ry, dimensions, scale=10, image_size=(500, 500)):
+    # 假設corners是一個包含8個角點的列表，每個角點是[x, y, z]格式
+    # 並且只取底部的四個角點（通常是列表的前四個元素）
+    R = rotation_matrix(ry)
+    corners = create_corners(dimensions, location=center, R=R)
+    # 提取底部四個角點的X和Y座標
+    base_corners = corners[1:8:2]
+    base_corners[1], base_corners[2], base_corners[3] = base_corners[2], base_corners[3], base_corners[1]
+    for item in base_corners:
+        print(item[:2])
+    x_coords = [corner[0] - center[0] for corner in base_corners]
+    y_coords = [corner[1] - center[1] for corner in base_corners]
+
+    # 將座標縮放並轉換為圖像座標系（原點在左上角）
+    x_coords = [int((x + max(-min(x_coords), max(x_coords))) * scale) + image_size[0] // 2 for x in x_coords]
+    y_coords = [int((y + max(-min(y_coords), max(y_coords))) * scale) + image_size[1] // 2 for y in y_coords]
+
+    # 創建一個空白圖像
+    #bev_img = np.zeros((image_size[1], image_size[0], 3), dtype=np.uint8) + 255
+
+    # 繪製邊界框的底部
     for i in range(4):
-        cv2.line(img_bev, points[i], points[(i+1)%4], color, 2)
-        cv2.line(img_bev, points[i+4], points[(i+1)%4+4], color, 2)
-        cv2.line(img_bev, points[i], points[i+4], color, 2)
-
-    # 顯示圖像
-    cv2.imshow(window_name, img_bev)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        start_point = (x_coords[i], y_coords[i])
+        end_point = (x_coords[(i + 1) % 4], y_coords[(i + 1) % 4])
+        cv2.line(bev_img, start_point, end_point, (255, 0, 0), 2)

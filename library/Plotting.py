@@ -124,28 +124,40 @@ def plot_2d_box(img, box_2d):
 
 
 
-def plot_bev(bev_img, center, ry, dimensions, scale=10, image_size=(500, 500)):
+def plot_bev(bev_img, center, ry, dimensions, scale=1, image_size=(500, 1000)):
     # 假設corners是一個包含8個角點的列表，每個角點是[x, y, z]格式
     # 並且只取底部的四個角點（通常是列表的前四個元素）
     R = rotation_matrix(ry)
     corners = create_corners(dimensions, location=center, R=R)
     # 提取底部四個角點的X和Y座標
-    base_corners = corners[1:8:2]
+    corner_indices = [2, 3, 6, 7]
+    base_corners = [corners[i] for i in corner_indices]
     base_corners[1], base_corners[2], base_corners[3] = base_corners[2], base_corners[3], base_corners[1]
     for item in base_corners:
-        print(item[:2])
-    x_coords = [corner[0] - center[0] for corner in base_corners]
-    y_coords = [corner[1] - center[1] for corner in base_corners]
+        print(item)
+    x_coords = [corner[0]  for corner in base_corners]
+    z_coords = [corner[2]  for corner in base_corners]
+    print(f"x_coords = {x_coords}")
+    print(f"z_coords = {z_coords}")
 
-    # 將座標縮放並轉換為圖像座標系（原點在左上角）
-    x_coords = [int((x + max(-min(x_coords), max(x_coords))) * scale) + image_size[0] // 2 for x in x_coords]
-    y_coords = [int((y + max(-min(y_coords), max(y_coords))) * scale) + image_size[1] // 2 for y in y_coords]
-
+    x_offset = image_size[0] // 2
+    z_offset = image_size[1]
+    origin = (x_offset, z_offset)
+    # 將座標縮放並轉換為圖像座標系（原點在底部中間）
+    x_coords = [int((x) * scale + x_offset) for x in x_coords]
+    z_coords = [int((-z) * scale + z_offset) for z in z_coords]
+    print(f"plot_x_coords = {x_coords}")
+    print(f"plot_z_coords = {z_coords}")
     # 創建一個空白圖像
     #bev_img = np.zeros((image_size[1], image_size[0], 3), dtype=np.uint8) + 255
 
+    # 繪製同心圓
+    for radius in range(1, 11, ):
+        scaled_radius = int(radius*10*scale)
+        cv2.circle(bev_img, origin, scaled_radius, (200, 200, 200), 2)
+        cv2.putText(bev_img, f"{radius*10}m", (origin[0] + scaled_radius + 5, origin[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
     # 繪製邊界框的底部
     for i in range(4):
-        start_point = (x_coords[i], y_coords[i])
-        end_point = (x_coords[(i + 1) % 4], y_coords[(i + 1) % 4])
+        start_point = (x_coords[i], z_coords[i])
+        end_point = (x_coords[(i + 1) % 4], z_coords[(i + 1) % 4])
         cv2.line(bev_img, start_point, end_point, (255, 0, 0), 2)

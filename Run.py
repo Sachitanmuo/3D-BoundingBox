@@ -182,9 +182,9 @@ def main():
         if FLAGS.show_yolo:
             numpy_vertical = np.concatenate((truth_img, img), axis=0)
             cv2.imshow('SPACE for next image, any other key to exit', numpy_vertical)
-        else:
-            cv2.imshow('3D detections', img)
             cv2.imshow('BEV', bev_img)
+        else:
+            cv2.imshow('3D detections', img)           
 
         if not FLAGS.hide_debug:
             print("\n")

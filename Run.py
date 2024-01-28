@@ -184,7 +184,8 @@ def main():
             cv2.imshow('SPACE for next image, any other key to exit', numpy_vertical)
             cv2.imshow('BEV', bev_img)
         else:
-            cv2.imshow('3D detections', img)           
+            cv2.imshow('3D detections', img) 
+            cv2.imshow('BEV', bev_img)         
 
         if not FLAGS.hide_debug:
             print("\n")

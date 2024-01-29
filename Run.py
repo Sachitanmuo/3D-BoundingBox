@@ -12,7 +12,7 @@ from library.Math import *
 from library.Plotting import *
 from torch_lib import Model, ClassAverages
 from yolo.yolo import cv_Yolo
-
+from  efficientnet_pytorch import EfficientNet
 import os
 import time
 
@@ -26,6 +26,10 @@ from torchvision.models import vgg
 
 import argparse
 
+
+#===Use ONNX to speed up===
+import onnx
+import onnxruntime as ort
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -76,15 +80,18 @@ def main():
 
     # load torch
     weights_path = os.path.abspath(os.path.dirname(__file__)) + '/weights'
+    onnx_path = weights_path + "/model.onnx"
     model_lst = [x for x in sorted(os.listdir(weights_path)) if x.endswith('.pkl')]
+    onnx_model = onnx.load(onnx_path)
+    ort_session = ort.InferenceSession(weights_path + "/model.onnx")
     if len(model_lst) == 0:
         print('No previous model found, please train first!')
         exit()
     else:
         print('Using previous model %s'%model_lst[-1])
-        my_vgg = vgg.vgg19_bn(pretrained=True)
+        my_efficeintnet = EfficientNet.from_pretrained('efficientnet-b0')
         # TODO: load bins from file or something
-        model = Model.Model(features=my_vgg.features, bins=2).cuda()
+        model = Model.Model(model_name='efficientnet-b0', bins=2).cuda()
         checkpoint = torch.load(weights_path + '/%s'%model_lst[-1])
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
@@ -153,13 +160,16 @@ def main():
             box_2d = detection.box_2d
             detected_class = detection.detected_class
 
-            input_tensor = torch.zeros([1,3,224,224]).cuda()
+            input_tensor = torch.zeros([1,3,224,224]).cuda() #1, 3, 224, 224
             input_tensor[0,:,:,:] = input_img
-
-            [orient, conf, dim] = model(input_tensor)
-            orient = orient.cpu().data.numpy()[0, :, :]
-            conf = conf.cpu().data.numpy()[0, :]
-            dim = dim.cpu().data.numpy()[0, :]
+            input_data = {"input": input_tensor.cpu().numpy()}
+            #[orient, conf, dim] = model(input_tensor)
+            output =  ort_session.run(None, input_data)
+            print(output)
+            orient, conf, dim = output
+            orient = orient[0, :, :]
+            conf = conf[0, :]
+            dim = dim[0, :]
 
             dim += averages.get_item(detected_class)
 

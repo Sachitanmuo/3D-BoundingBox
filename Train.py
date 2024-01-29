@@ -6,10 +6,10 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torchvision.models import vgg
-from torchvision.models import mobilenet_v3_small
+from efficientnet_pytorch import EfficientNet
 from torch.utils import data
 from ultralytics import YOLO
-
+import torch.onnx
 import os
 
 def main():
@@ -32,10 +32,9 @@ def main():
 
 
     # 替換VGG模型的相應部分
-    #my_mobilenetv3_small = mobilenet_v3_small(pretrained=True)  # 使用適當的預訓練權重
-    #model = Model(features=my_mobilenetv3_small.features).cuda()
-    my_vgg = vgg.vgg19_bn(pretrained=True)
-    model = Model(features=my_vgg.features).cuda()
+    my_efficientnet = EfficientNet.from_pretrained('efficientnet-b0')
+    #my_vgg = vgg.vgg19_bn(pretrained=True)
+    model = Model(model_name='efficientnet-b0').cuda()
     opt_SGD = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
     conf_loss_func = nn.CrossEntropyLoss().cuda()
     dim_loss_func = nn.MSELoss().cuda()
@@ -114,6 +113,10 @@ def main():
                     'loss': loss
                     }, name)
             print("====================")
+            print("=====ONNX format=====")
+            input_tensor = torch.zeros([1, 3, 224, 224]).cuda()
+            torch.onnx.export(model, input_tensor, "model.onnx", input_names=["input"], output_names=["orientation", "confidence", "dimension"])
+            print("=====ONNX done=====")
 
 if __name__=='__main__':
     main()

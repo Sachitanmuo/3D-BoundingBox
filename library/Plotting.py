@@ -87,7 +87,7 @@ def plot_3d_box(img, cam_to_img, ry, dimension, center):
     # 繪製Bird's Eye View
     # to see the corners on image as red circles
     plot_3d_pts(img, corners, center,cam_to_img=cam_to_img, relative=False)
-    print(f"center:{center}")
+    #print(f"center:{center}")
     box_3d = []
     for corner in corners:
         point = project_3d_pt(corner, cam_to_img)
@@ -133,12 +133,10 @@ def plot_bev(bev_img, center, ry, dimensions, scale=1, image_size=(500, 1000)):
     corner_indices = [2, 3, 6, 7]
     base_corners = [corners[i] for i in corner_indices]
     base_corners[1], base_corners[2], base_corners[3] = base_corners[2], base_corners[3], base_corners[1]
-    for item in base_corners:
-        print(item)
     x_coords = [corner[0]  for corner in base_corners]
     z_coords = [corner[2]  for corner in base_corners]
-    print(f"x_coords = {x_coords}")
-    print(f"z_coords = {z_coords}")
+    #print(f"x_coords = {x_coords}")
+    #print(f"z_coords = {z_coords}")
 
     x_offset = image_size[0] // 2
     z_offset = image_size[1]
@@ -146,8 +144,8 @@ def plot_bev(bev_img, center, ry, dimensions, scale=1, image_size=(500, 1000)):
     # 將座標縮放並轉換為圖像座標系（原點在底部中間）
     x_coords = [int((x) * scale + x_offset) for x in x_coords]
     z_coords = [int((-z) * scale + z_offset) for z in z_coords]
-    print(f"plot_x_coords = {x_coords}")
-    print(f"plot_z_coords = {z_coords}")
+    #print(f"plot_x_coords = {x_coords}")
+    #print(f"plot_z_coords = {z_coords}")
     # 創建一個空白圖像
     #bev_img = np.zeros((image_size[1], image_size[0], 3), dtype=np.uint8) + 255
 

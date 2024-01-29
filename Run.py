@@ -139,8 +139,10 @@ def main():
         truth_img = cv2.imread(img_file)
         img = np.copy(truth_img)
         yolo_img = np.copy(truth_img)
-
+        start_time_yolo = time.time()
         detections = yolo.detect(yolo_img)
+        end_time_yolo = time.time()
+        print("yolo prediction time = ", end_time_yolo - start_time_yolo,"seconds")
         bev_img = np.zeros((500, 500, 3), dtype=np.uint8) + 255
         for detection in detections:
 
@@ -164,8 +166,10 @@ def main():
             input_tensor[0,:,:,:] = input_img
             input_data = {"input": input_tensor.cpu().numpy()}
             #[orient, conf, dim] = model(input_tensor)
+            start_time_eff = time.time()
             output =  ort_session.run(None, input_data)
-            print(output)
+            end_time_eff = time.time()
+            print("model prediction time = ", end_time_eff - start_time_eff,"seconds")
             orient, conf, dim = output
             orient = orient[0, :, :]
             conf = conf[0, :]

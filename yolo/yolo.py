@@ -29,7 +29,7 @@ class cv_Yolo:
     def detect(self, image):
         # assert image is opencv
         (H,W) = image.shape[:2]
-        print(f'(H,W)={H}, {W}')
+        #print(f'(H,W)={H}, {W}')
         ln = self.net.getLayerNames()
         ln = [ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
 

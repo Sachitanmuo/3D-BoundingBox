@@ -125,8 +125,6 @@ def plot_2d_box(img, box_2d):
 
 
 def plot_bev(bev_img, center, ry, dimensions, scale=1, image_size=(500, 1000)):
-    # 假設corners是一個包含8個角點的列表，每個角點是[x, y, z]格式
-    # 並且只取底部的四個角點（通常是列表的前四個元素）
     R = rotation_matrix(ry)
     corners = create_corners(dimensions, location=center, R=R)
     # 提取底部四個角點的X和Y座標

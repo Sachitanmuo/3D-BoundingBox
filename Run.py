@@ -80,10 +80,10 @@ def main():
 
     # load torch
     weights_path = os.path.abspath(os.path.dirname(__file__)) + '/weights'
-    onnx_path = weights_path + "/model.onnx"
+    onnx_path = weights_path + "/epoch_20.onnx"
     model_lst = [x for x in sorted(os.listdir(weights_path)) if x.endswith('.pkl')]
     onnx_model = onnx.load(onnx_path)
-    ort_session = ort.InferenceSession(weights_path + "/model.onnx")
+    ort_session = ort.InferenceSession(onnx_path)
     if len(model_lst) == 0:
         print('No previous model found, please train first!')
         exit()

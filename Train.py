@@ -15,8 +15,8 @@ import os
 def main():
 
     # hyper parameters
-    epochs = 10
-    batch_size = 8
+    epochs = 100
+    batch_size = 32
     alpha = 0.6
     w = 0.4
 
@@ -59,7 +59,6 @@ def main():
         opt_SGD.load_state_dict(checkpoint['optimizer_state_dict'])
         first_epoch = checkpoint['epoch']
         loss = checkpoint['loss']
-
         print('Found previous checkpoint: %s at epoch %s'%(latest_model, first_epoch))
         print('Resuming training....')
 
@@ -103,6 +102,7 @@ def main():
         # save after every 10 epochs
         if epoch % 10 == 0:
             name = model_path + 'epoch_%s.pkl' % epoch
+            onnx_name = model_path + 'epoch_%s.onnx' % epoch
             print("====================")
             print ("Done with epoch %s!" % epoch)
             print ("Saving weights as %s ..." % name)
@@ -115,8 +115,9 @@ def main():
             print("====================")
             print("=====ONNX format=====")
             input_tensor = torch.zeros([1, 3, 224, 224]).cuda()
-            torch.onnx.export(model, input_tensor, "model.onnx", input_names=["input"], output_names=["orientation", "confidence", "dimension"])
+            torch.onnx.export(model, input_tensor, onnx_name, input_names=["input"], output_names=["orientation", "confidence", "dimension"])
             print("=====ONNX done=====")
+        
 
 if __name__=='__main__':
     main()

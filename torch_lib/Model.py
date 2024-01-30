@@ -20,7 +20,7 @@ def OrientationLoss(orient_batch, orientGT_batch, confGT_batch):
     return -1 * torch.cos(theta_diff - estimated_theta_diff).mean()
 
 class Model(nn.Module):
-    def __init__(self, model_name='efficientnet-b0', bins=2, w = 0.4, input_size=(224, 224)):
+    def __init__(self, model_name=None, bins=2, w = 0.4, input_size=(224, 224)):
         super(Model, self).__init__()
         self.bins = bins
         self.w = w

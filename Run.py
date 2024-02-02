@@ -23,7 +23,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torchvision.models import vgg
-
+import repvgg_pytorch as repvgg
 import argparse
 
 
@@ -80,7 +80,7 @@ def main():
 
     # load torch
     weights_path = os.path.abspath(os.path.dirname(__file__)) + '/weights'
-    onnx_path = weights_path + "/epoch_20.onnx"
+    onnx_path = weights_path + "/epoch_10.onnx"
     model_lst = [x for x in sorted(os.listdir(weights_path)) if x.endswith('.pkl')]
     onnx_model = onnx.load(onnx_path)
     ort_session = ort.InferenceSession(onnx_path)
@@ -89,9 +89,9 @@ def main():
         exit()
     else:
         print('Using previous model %s'%model_lst[-1])
-        my_efficeintnet = EfficientNet.from_pretrained('efficientnet-b0')
+        #my_efficeintnet = EfficientNet.from_pretrained('efficientnet-b0')
         # TODO: load bins from file or something
-        model = Model.Model(model_name='efficientnet-b0', bins=2).cuda()
+        model = Model.Model(model_name='RepVGG-A0', deploy = True, bins=2).cuda()
         checkpoint = torch.load(weights_path + '/%s'%model_lst[-1])
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()

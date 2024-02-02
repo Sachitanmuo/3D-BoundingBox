@@ -1,12 +1,10 @@
 from torch_lib.Dataset import *
 from torch_lib.Model import Model, OrientationLoss
-
-
+from repvgg_pytorch import get_RepVGG_func_by_name
+from repvgg_pytorch import repvgg_model_convert
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torchvision.models import vgg
-from efficientnet_pytorch import EfficientNet
 from torch.utils import data
 from ultralytics import YOLO
 import torch.onnx
@@ -16,9 +14,9 @@ def main():
 
     # hyper parameters
     epochs = 100
-    batch_size = 32
-    alpha = 0.6
-    w = 0.4
+    batch_size = 8
+    alpha = 0.4
+    w = 0.6
 
     print("Loading all detected objects in dataset...")
 
@@ -31,11 +29,8 @@ def main():
     generator = data.DataLoader(dataset, **params)
 
 
-    # 替換VGG模型的相應部分
-    my_efficientnet = EfficientNet.from_pretrained('efficientnet-b0')
-    #my_vgg = vgg.vgg19_bn(pretrained=True)
-    model = Model(model_name='efficientnet-b0').cuda()
-    opt_SGD = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
+    model = Model(model_name = 'RepVGG-A0', deploy =False).cuda()
+    opt_SGD = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
     conf_loss_func = nn.CrossEntropyLoss().cuda()
     dim_loss_func = nn.MSELoss().cuda()
     orient_loss_func = OrientationLoss

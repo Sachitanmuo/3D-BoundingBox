@@ -97,7 +97,8 @@ def main():
         model.eval()
 
     # load yolo
-    yolo_path = os.path.abspath(os.path.dirname(__file__)) + '/weights'
+    yolo_path = os.path.abspath(os.path.dirname(__file__)) + '/weights/best.pt'
+
     yolo = cv_Yolo(yolo_path)
 
     averages = ClassAverages.ClassAverages()
@@ -145,7 +146,7 @@ def main():
         print("yolo prediction time = ", end_time_yolo - start_time_yolo,"seconds")
         bev_img = np.zeros((500, 500, 3), dtype=np.uint8) + 255
         for detection in detections:
-
+            print(f"detection:{detection.get_2dbox()}")
             if not averages.recognized_class(detection.detected_class):
                 continue
 

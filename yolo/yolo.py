@@ -8,87 +8,41 @@ source: https://www.pyimagesearch.com/2018/11/12/yolo-object-detection-with-open
 import cv2
 import numpy as np
 import os
-
+from ultralytics import YOLO
 class cv_Yolo:
 
-    def __init__(self, yolo_path, confidence=0.5, threshold=0.3):
-        self.confidence = confidence
-        self.threshold = threshold
+    def __init__(self, yolo_path, confidence=0.5, iou_threshold=0.3):
+        self.model = YOLO(yolo_path)
+        self.model.conf = confidence  
+        self.model.iou = iou_threshold
 
-        labels_path = os.path.sep.join([yolo_path, "coco.names"])
-        self.labels = open(labels_path).read().split("\n")
+        
 
-        np.random.seed(42)
-        self.colors = np.random.randint(0,255, size=(len(self.labels), 3), dtype="uint8")
+    def detect(self, image_path):
+        results = self.model(image_path)
 
-        weights_path = os.path.sep.join([yolo_path, "yolov3.weights"])
-        cfg_path = os.path.sep.join([yolo_path, "yolov3.cfg"])
-
-        self.net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
-
-    def detect(self, image):
-        # assert image is opencv
-        (H,W) = image.shape[:2]
-        #print(f'(H,W)={H}, {W}')
-        ln = self.net.getLayerNames()
-        ln = [ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
-
-        # prepare input
-        blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)
-
-        self.net.setInput(blob)
-        output = self.net.forward(ln)
-
+        results = results[0]
+        boxes = results.boxes.xyxy
+        class_ids = results.boxes.cls
         detections = []
-
-        boxes = []
         confidences = []
-        class_ids = []
+        name = results.names
 
-        for output in output:
-            for detection in output:
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-
-                if confidence > self.confidence:
-
-                    box = detection[0:4] * np.array([W, H, W, H])
-                    (centerX, centerY, width, height) = box.astype("int")
-
-                    # use the center (x, y)-coordinates to derive the top and
-                    # and left corner of the bounding box
-                    x = int(centerX - (width / 2))
-                    y = int(centerY - (height / 2))
-
-                    # update our list of bounding box coordinates, confidences,
-                    # and class IDs
-
-                    boxes.append([x, y, int(width), int(height)])
-                    confidences.append(float(confidence))
-                    class_ids.append(class_id)
-
-
-
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence, self.threshold)
-
-        if len(idxs) > 0:
-            for i in idxs.flatten():
-
-                top_left = (boxes[i][0], boxes[i][1])
-                bottom_right = (top_left[0] + boxes[i][2], top_left[1] + boxes[i][3])
-
-                box_2d = [top_left, bottom_right]
-                class_ = self.get_class(class_ids[i])
-                if class_ == "person":
-                    class_ = "pedestrian"
-
-                detections.append(Detection(box_2d, class_))
-
+        for box, cls_id in zip(boxes, class_ids):
+            #box = box[1]
+            x1, y1, x2, y2, = box[0:4]
+            box_2d = [(int(x1), int(y1)), (int(x2), int(y2))]
+            class_ = name[cls_id.item()]
+            detections.append(Detection(box_2d, class_))
+            '''
+        for cls in enumerate(results.boxes.cls):
+            class_ = name[cls[1].item()]
+            print(class_)
+            print(cls[1].item())
+            '''
         return detections
 
-    def get_class(self, class_id):
-        return self.labels[class_id]
+
 
 
 
@@ -96,3 +50,5 @@ class Detection:
     def __init__(self, box_2d, class_):
         self.box_2d = box_2d
         self.detected_class = class_
+    def get_2dbox(self):
+        return self.box_2d

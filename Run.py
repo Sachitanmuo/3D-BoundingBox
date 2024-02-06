@@ -12,7 +12,6 @@ from library.Math import *
 from library.Plotting import *
 from torch_lib import Model, ClassAverages
 from yolo.yolo import cv_Yolo
-from  efficientnet_pytorch import EfficientNet
 import os
 import time
 
@@ -97,7 +96,8 @@ def main():
         model.eval()
 
     # load yolo
-    yolo_path = os.path.abspath(os.path.dirname(__file__)) + '/weights'
+    yolo_path = os.path.abspath(os.path.dirname(__file__)) + '/weights/best.pt'
+
     yolo = cv_Yolo(yolo_path)
 
     averages = ClassAverages.ClassAverages()
@@ -145,7 +145,7 @@ def main():
         print("yolo prediction time = ", end_time_yolo - start_time_yolo,"seconds")
         bev_img = np.zeros((500, 500, 3), dtype=np.uint8) + 255
         for detection in detections:
-
+            print(f"detection:{detection.get_2dbox()}")
             if not averages.recognized_class(detection.detected_class):
                 continue
 
@@ -158,10 +158,10 @@ def main():
 
             theta_ray = detectedObject.theta_ray
             input_img = detectedObject.img
+            input_img_np = input_img.permute(1, 2, 0).cpu().detach().numpy()
             proj_matrix = detectedObject.proj_matrix
             box_2d = detection.box_2d
             detected_class = detection.detected_class
-
             input_tensor = torch.zeros([1,3,224,224]).cuda() #1, 3, 224, 224
             input_tensor[0,:,:,:] = input_img
             input_data = {"input": input_tensor.cpu().numpy()}
@@ -199,7 +199,9 @@ def main():
             cv2.imshow('BEV', bev_img)
         else:
             cv2.imshow('3D detections', img) 
-            cv2.imshow('BEV', bev_img)         
+            cv2.imshow('BEV', bev_img)
+            print(input_img_np.shape)
+            cv2.imshow('input:', input_img_np)       
 
         if not FLAGS.hide_debug:
             print("\n")

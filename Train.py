@@ -89,6 +89,7 @@ def main():
 
             if passes % 10 == 0:
                 print("--- epoch %s | batch %s/%s --- [loss: %s]" %(epoch, curr_batch, total_num_batches, loss.item()))
+                print(f"loss = alpha [{alpha}] * dim_loss [{dim_loss}] + loss_theta [{loss_theta}]")
                 passes = 0
 
             passes += 1

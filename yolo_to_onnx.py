@@ -11,3 +11,4 @@ dummy_input = torch.randn(1, 3, 416, 416)
 
 onnx_path = 'yolo_model.onnx'
 torch.onnx.export(model, dummy_input, onnx_path, input_names=['input'], output_names=['output'])
+

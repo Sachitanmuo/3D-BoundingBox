@@ -6,7 +6,7 @@ import random
 import torch
 from torchvision import transforms
 from torch.utils import data
-
+import math
 from library.File import *
 
 from .ClassAverages import ClassAverages
@@ -17,20 +17,20 @@ def generate_bins(bins):
     interval = 2 * np.pi / bins
     for i in range(1,bins):
         angle_bins[i] = i * interval
-    angle_bins += interval / 2 # center of the bin
+    #angle_bins += interval / 2 # center of the bin
 
     return angle_bins
 
 class Dataset(data.Dataset):
-    def __init__(self, path, bins=2, overlap=0.1):
+    def __init__(self, path, bins=4, overlap=0.1):
 
-        self.top_label_path = path + "/label_2/"
+        self.top_label_path = path + "/label_new/"
         self.top_img_path = path + "/image_2/"
         self.top_calib_path = path + "/calib/"
         # use a relative path instead?
 
         # TODO: which camera cal to use, per frame or global one?
-        self.proj_matrix = get_P(os.path.abspath(os.path.dirname(os.path.dirname(__file__)) + '/camera_cal/calib_cam_to_cam.txt'))
+        self.proj_matrix = (os.path.abspath(os.path.dirname(os.path.dirname(__file__)) + '/camera_cal/calib_cam_to_cam.txt'))
         #Modifications:
         file_list = sorted(os.listdir(self.top_img_path))
         twenty_percent = int(len(file_list) )#* 0.2)
@@ -51,11 +51,12 @@ class Dataset(data.Dataset):
         # [(min angle in bin, max angle in bin), ... ]
         self.bin_ranges = []
         for i in range(0,bins):
-            self.bin_ranges.append(( (i*self.interval - overlap) % (2*np.pi), \
-                                (i*self.interval + self.interval + overlap) % (2*np.pi)) )
+            self.bin_ranges.append(( (i*self.interval - 0.5 * self.interval - overlap) % (2*np.pi), \
+                                (i*self.interval + 0.5 * self.interval + overlap) % (2*np.pi)) )
 
         # hold average dimensions
-        class_list = ['Car', 'Van', 'Truck', 'Pedestrian','Person_sitting', 'Cyclist', 'Tram', 'Misc']
+        #class_list = ['Car', 'Van', 'Truck', 'Pedestrian','Person_sitting', 'Cyclist', 'Tram', 'Misc']
+        class_list = ['car', 'bus', 'truck', 'pedestrian', 'bicycle', 'motorcycle']
         self.averages = ClassAverages(class_list)
 
         self.object_list = self.get_objects(self.ids)
@@ -145,8 +146,17 @@ class Dataset(data.Dataset):
         for i in range(1, len(line)):
             line[i] = float(line[i])
 
-        Alpha = line[3] # what we will be regressing
+        #Alpha = line[3] # what we will be regressing
         Ry = line[14]
+        x_coord = line[11]
+        z_coord = line[13]
+        epsilon = 1e-7
+        beta = math.atan(x_coord/(z_coord + epsilon))
+        Alpha = round(Ry - beta, 6)
+        if Alpha > math.pi:
+            Alpha -= 2 * math.pi
+        elif Alpha < -math.pi:
+            Alpha += 2 * math.pi
         top_left = (int(round(line[4])), int(round(line[5])))
         bottom_right = (int(round(line[6])), int(round(line[7])))
         Box_2D = [top_left, bottom_right]
@@ -197,8 +207,17 @@ class Dataset(data.Dataset):
                 for i in range(1, len(line)):
                     line[i] = float(line[i])
 
-                Alpha = line[3] # what we will be regressing
+                #Alpha = line[3] # what we will be regressing
                 Ry = line[14]
+                x_coord = line[11]
+                z_coord = line[13]
+                epsilon = 1e-7
+                beta = math.atan(x_coord/(z_coord + epsilon))
+                Alpha = round(Ry - beta, 6)
+                if Alpha > math.pi:
+                    Alpha -= 2 * math.pi
+                elif Alpha < -math.pi:
+                    Alpha += 2 * math.pi
                 top_left = (int(round(line[4])), int(round(line[5])))
                 bottom_right = (int(round(line[6])), int(round(line[7])))
                 Box_2D = [top_left, bottom_right]
@@ -301,6 +320,9 @@ class DetectedObject:
         pt1 = box_2d[0]
         pt2 = box_2d[1]
         crop = img[pt1[1]:pt2[1]+1, pt1[0]:pt2[0]+1]
+
+        if crop is None or crop.size ==0 or not crop.any():
+            crop = np.zeros((224, 224, 3), dtype=np.uint8)
         crop = cv2.resize(src = crop, dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
         
         # recolor, reformat

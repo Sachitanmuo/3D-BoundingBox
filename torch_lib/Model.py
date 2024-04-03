@@ -20,13 +20,14 @@ def OrientationLoss(orient_batch, orientGT_batch, confGT_batch):
     return -1 * torch.cos(theta_diff - estimated_theta_diff).mean()
 
 class Model(nn.Module):
-    def __init__(self, model_name = None, deploy = False,  bins=2, w = 0.4, input_size=(224, 224)):
+    def __init__(self, model_name = None, deploy = False,  bins=4, w = 0.4, input_size=(224, 224)):
         super(Model, self).__init__()
         self.bins = bins
         self.w = w
         self.deploy = deploy
         self.repvgg = repvgg.get_RepVGG_func_by_name(model_name)(deploy=self.deploy)
         self.repvgg = repvgg.repvgg_model_convert(self.repvgg)
+        '''
         self.orientation = nn.Sequential(
                     nn.Linear(1000, 512),
                     nn.ReLU(True),
@@ -36,18 +37,30 @@ class Model(nn.Module):
                     nn.Dropout(),
                     nn.Linear(256, bins*2) # to get sin and cos
                 )
+        '''
         self.confidence = nn.Sequential(
                     nn.Linear(1000, 512),
                     nn.ReLU(True),
-                    nn.Dropout(),
+                    #nn.Dropout(),
                     nn.Linear(512, 256),
                     nn.ReLU(True),
-                    nn.Dropout(),
+                    #nn.Dropout(),
                     nn.Linear(256, bins),
                     # nn.Softmax()
                     #nn.Sigmoid()
                 )
-        self.dimension = nn.Sequential(
+        '''
+        self.alpha = nn.Sequential(
+                    nn.Linear(1000, 512),
+                    nn.ReLU(True),
+                    #nn.Dropout(),
+                    nn.Linear(512, 256),
+                    nn.ReLU(True),
+                    #nn.Dropout(),
+                    nn.Linear(256, 1) # to get sin and cos
+                )
+        '''
+        '''self.dimension = nn.Sequential(
                     nn.Linear(1000, 512),
                     nn.ReLU(True),
                     nn.Dropout(),
@@ -55,14 +68,16 @@ class Model(nn.Module):
                     nn.ReLU(True),
                     nn.Dropout(),
                     nn.Linear(512, 3)
-                )
+                )'''
 
     def forward(self, x):
         x = self.repvgg(x) # 1000
         x = x.view(-1, 1000)
-        orientation = self.orientation(x)
-        orientation = orientation.view(-1, self.bins, 2)
-        orientation = F.normalize(orientation, dim=2)
+        #orientation = self.orientation(x)
+        #orientation = orientation.view(-1, self.bins, 2)
+        #orientation = F.normalize(orientation, dim=2)
         confidence = self.confidence(x)
-        dimension = self.dimension(x)
-        return orientation, confidence, dimension
+        #alpha = self.alpha(x)
+        #dimension = self.dimension(x)
+        return confidence
+        #return alpha

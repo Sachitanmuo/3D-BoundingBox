@@ -33,6 +33,11 @@ class cv_Yolo:
             x1, y1, x2, y2, = box[0:4]
             box_2d = [(int(x1), int(y1)), (int(x2), int(y2))]
             class_ = name[cls_id.item()]
+            if class_ == 'Pedestrian': 
+                class_ = 'pedestrian'
+            if class_ == 'Car': 
+                class_ = 'car'
+            print(class_)
             detections.append(Detection(box_2d, class_))
             '''
         for cls in enumerate(results.boxes.cls):

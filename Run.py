@@ -24,7 +24,7 @@ from torch.autograd import Variable
 from torchvision.models import vgg
 import repvgg_pytorch as repvgg
 import argparse
-
+from TRT import TRT
 
 #===Use ONNX to speed up===
 import onnx
@@ -80,9 +80,14 @@ def main():
     # load torch
     weights_path = os.path.abspath(os.path.dirname(__file__)) + '/weights'
     onnx_path = weights_path + "/epoch_10.onnx"
-    model_lst = [x for x in sorted(os.listdir(weights_path)) if x.endswith('.pkl')]
+    model_lst = [x for x in sorted(os.listdir(weights_path)) if x.endswith('.engine')]
     onnx_model = onnx.load(onnx_path)
     ort_session = ort.InferenceSession(onnx_path)
+
+    model_path = './weights/epoch_10.engine'
+    trt_model = TRT(model_path=model_path, fp16=True)
+    trt_model.start()
+    '''
     if len(model_lst) == 0:
         print('No previous model found, please train first!')
         exit()
@@ -90,11 +95,12 @@ def main():
         print('Using previous model %s'%model_lst[-1])
         #my_efficeintnet = EfficientNet.from_pretrained('efficientnet-b0')
         # TODO: load bins from file or something
-        model = Model.Model(model_name='RepVGG-A0', deploy = True, bins=2).cuda()
+        model = Model.Model(model_name='efficientnet-b0').cuda()
+        #model = Model.Model(model_name='RepVGG-A0', deploy = True, bins=2).cuda()
         checkpoint = torch.load(weights_path + '/%s'%model_lst[-1])
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
-
+    '''
     # load yolo
     yolo_path = os.path.abspath(os.path.dirname(__file__)) + '/weights/best.pt'
 
@@ -103,7 +109,7 @@ def main():
     averages = ClassAverages.ClassAverages()
 
     # TODO: clean up how this is done. flag?
-    angle_bins = generate_bins(2)
+    angle_bins = generate_bins(4)
 
     image_dir = FLAGS.image_dir
     cal_dir = FLAGS.cal_dir
@@ -113,10 +119,13 @@ def main():
             cal_dir = "eval/video/2011_09_26/"
 
 
-    img_path = os.path.abspath(os.path.dirname(__file__)) + "/" + image_dir
+    #img_path = os.path.abspath(os.path.dirname(__file__)) + "/" + image_dir
+    img_path = 'C:/Users/99/Desktop/GitHub/3D-BoundingBox/Kitti/image_2/'
     # using P_rect from global calibration file
-    calib_path = os.path.abspath(os.path.dirname(__file__)) + "/" + cal_dir
-    calib_file = calib_path + "calib_cam_to_cam.txt"
+    #calib_path = os.path.abspath(os.path.dirname(__file__)) + "/" + cal_dir
+    #calib_file = calib_path + "calib_cam_to_cam.txt"
+    calib_file = 'C:/Users/99/Desktop/GitHub/3D-BoundingBox/eval/calib/calib_cam_to_cam.txt'
+    calib_path = 'C:/Users/99/Desktop/GitHub/3D-BoundingBox/Kitti/training/calib'
 
     # using P from each frame
     # calib_path = os.path.abspath(os.path.dirname(__file__)) + '/Kitti/testing/calib/'
@@ -145,10 +154,11 @@ def main():
         print("yolo prediction time = ", end_time_yolo - start_time_yolo,"seconds")
         bev_img = np.zeros((500, 500, 3), dtype=np.uint8) + 255
         for detection in detections:
-            print(f"detection:{detection.get_2dbox()}")
             if not averages.recognized_class(detection.detected_class):
                 continue
-
+            #check if detected object is too snall or not, 
+            if (detection.box_2d[1][0] - detection.box_2d[0][0]) * (detection.box_2d[1][1] - detection.box_2d[0][1]) < 10000:
+                continue
             # this is throwing when the 2d bbox is invalid
             # TODO: better check
             try:
@@ -165,26 +175,31 @@ def main():
             input_tensor = torch.zeros([1,3,224,224]).cuda() #1, 3, 224, 224
             input_tensor[0,:,:,:] = input_img
             input_data = {"input": input_tensor.cpu().numpy()}
-            #[orient, conf, dim] = model(input_tensor)
             start_time_eff = time.time()
-            output =  ort_session.run(None, input_data)
+            output_ =  ort_session.run(None, input_data)
+            conf_ = output_
+            #print(f"orient_:{orient_}")
+            output = trt_model.predict(input_tensor)
             end_time_eff = time.time()
             print("model prediction time = ", end_time_eff - start_time_eff,"seconds")
-            orient, conf, dim = output
-            orient = orient[0, :, :]
-            conf = conf[0, :]
-            dim = dim[0, :]
+            [conf] = output
 
-            dim += averages.get_item(detected_class)
+            conf = conf.cpu().numpy()
+            print(f"conf:{conf_}")
+
+
+            
+            dim = averages.get_item(detected_class)
 
             argmax = np.argmax(conf)
-            orient = orient[argmax, :]
-            cos = orient[0]
-            sin = orient[1]
+            #orient_ = orient_[argmax]
+            #assume theta_diff = 0
+            cos = np.cos(np.radians(0))
+            sin = np.sin(np.radians(0))
             alpha = np.arctan2(sin, cos)
             alpha += angle_bins[argmax]
             alpha -= np.pi
-
+            print(f"alpha:{alpha}")
             if FLAGS.show_yolo:
                 location = plot_regressed_3d_bbox(img, bev_img, proj_matrix, box_2d, dim, alpha, theta_ray, truth_img)
             else:
@@ -200,12 +215,12 @@ def main():
         else:
             cv2.imshow('3D detections', img) 
             cv2.imshow('BEV', bev_img)
-            print(input_img_np.shape)
-            cv2.imshow('input:', input_img_np)       
+            #print(input_img_np.shape)
+            #cv2.imshow('input:', input_img_np)       
 
         if not FLAGS.hide_debug:
             print("\n")
-            print('Got %s poses in %.3f seconds'%(len(detections), time.time() - start_time))
+            #print('Got %s poses in %.3f seconds'%(len(detections), time.time() - start_time))
             print('-------------')
 
         if FLAGS.video:

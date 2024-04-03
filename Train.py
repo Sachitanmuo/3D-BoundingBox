@@ -14,9 +14,9 @@ def main():
 
     # hyper parameters
     epochs = 100
-    batch_size = 8
-    alpha = 0.4
-    w = 0.6
+    batch_size = 2
+    #alpha = 0.4
+    w = 0.1
 
     print("Loading all detected objects in dataset...")
 
@@ -34,7 +34,7 @@ def main():
     conf_loss_func = nn.CrossEntropyLoss().cuda()
     dim_loss_func = nn.MSELoss().cuda()
     orient_loss_func = OrientationLoss
-
+    Alpha_loss_func = nn.SmoothL1Loss().cuda()
     # load any previous weights
     model_path = os.path.abspath(os.path.dirname(__file__)) + '/weights/'
     latest_model = None
@@ -66,31 +66,31 @@ def main():
         passes = 0
         for local_batch, local_labels in generator:
 
-            truth_orient = local_labels['Orientation'].float().cuda()
+            #truth_orient = local_labels['Orientation'].float().cuda()
             truth_conf = local_labels['Confidence'].long().cuda()
-            truth_dim = local_labels['Dimensions'].float().cuda()
-
+            #Alpha = local_labels['Alpha'].float().cuda()
+            #truth_dim = local_labels['Dimensions'].float().cuda()
             local_batch=local_batch.float().cuda()
-            [orient, conf, dim] = model(local_batch)
-
-            orient_loss = orient_loss_func(orient, truth_orient, truth_conf)
-            dim_loss = dim_loss_func(dim, truth_dim)
-
+            conf = model(local_batch)
+            #orient_loss = orient_loss_func(orient, truth_orient, truth_conf)
+            #dim_loss = dim_loss_func(dim, truth_dim)
+            #print(truth_conf)
             truth_conf = torch.max(truth_conf, dim=1)[1]
             conf_loss = conf_loss_func(conf, truth_conf)
-
-            loss_theta = conf_loss + w * orient_loss
-            loss = alpha * dim_loss + loss_theta
-
+            loss_theta = conf_loss
+            #loss = Alpha_loss_func(alpha, Alpha)
+            loss = loss_theta
             opt_SGD.zero_grad()
             loss.backward()
             opt_SGD.step()
 
 
-            if passes % 10 == 0:
+            if passes % 100 == 0:
                 print("--- epoch %s | batch %s/%s --- [loss: %s]" %(epoch, curr_batch, total_num_batches, loss.item()))
-                print(f"loss = alpha [{alpha}] * dim_loss [{dim_loss}] + loss_theta [{loss_theta}]")
                 passes = 0
+                #print(f"truth_orient:{truth_orient} | predicted: {orient}")
+                #print(f"truth_conf:{truth_conf} | predicted: {conf}")
+
 
             passes += 1
             curr_batch += 1
@@ -111,7 +111,8 @@ def main():
             print("====================")
             print("=====ONNX format=====")
             input_tensor = torch.zeros([1, 3, 224, 224]).cuda()
-            torch.onnx.export(model, input_tensor, onnx_name, input_names=["input"], output_names=["orientation", "confidence", "dimension"])
+            torch.onnx.export(model, input_tensor, onnx_name, input_names=["input"], output_names=["confidence"])
+            #torch.onnx.export(model, input_tensor, onnx_name, input_names=["input"], output_names=["alpha"])
             print("=====ONNX done=====")
         
 
